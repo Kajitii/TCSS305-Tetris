@@ -1,7 +1,7 @@
 TCSS305-Tetris
 ==============
 
-The Tetris project from TCSS 305: Programming Practicum class.
+The Tetris project from TCSS 305: Programming Practicum class.  It is built from the javax.swing library and has some local multiplayer capabilities.
 
 Copyright (C) 6/1/2013 Aaron Chen
 
