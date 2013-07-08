@@ -1,0 +1,200 @@
+/*
+ * TCSS305 Assignment 6: Tetris
+ * 5/24/2013 Aaron Chen
+ */
+
+package view;
+
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.KeyEvent;
+import java.util.Observable;
+import java.util.Observer;
+
+import javax.swing.JPanel;
+
+import model.Controls;
+
+/**
+ * A single instance of a Tetris graphical user interface.
+ * 
+ * @author Kajiti
+ * @version 0.6.1
+ */
+public class TetrisGameGUI extends JPanel implements Observer {
+
+  /** The serial version UID. */
+  private static final long serialVersionUID = -2828059938703055988L;
+
+  /** The default width of the stats panel. */
+  private static final int WIDTH = 400;
+  
+  /** The default height of the stats panel. */
+  private static final int HEIGHT = 600;
+  
+  /** The default level when starting a new game. */
+  private static final int DEFAULT_LEVEL = 1;
+  
+  /** The initial number of lines needed to advance to level 2. */
+  private static final int INITIAL_LINES = 10;
+  
+  /** Mathematical constant for calculating level progression. */
+  private static final int LINES_PER_LEVEL_INCREMENT = 2;
+  
+  /** The base score value of a single line clear. */
+  private static final int SCORE_PER_LINE = 100;
+  
+  /** The text to be displayed in stats. */
+  private static final String[] STATS_STRING = {
+    "Score: ",
+    "Lines: ",
+    "Level: ",
+  };
+  
+  /** The font to be used for text. */
+  private static final Font FONT = new Font(Font.SERIF, Font.PLAIN, 12);
+
+  /** The index for the score in the current game. */
+  private static final int SCORE_INDEX = 0;
+  
+  /** The index for the number of lines cleared in the current game. */
+  private static final int LINES_INDEX = 1;
+
+  /** The index for the difficulty level of the current game. */
+  private static final int LEVEL_INDEX = 2;
+  
+  /** The statistics for the current game. */
+  private final int[] my_stats;
+
+  private final TetrisBoardGUI my_board;
+  private final TetrisPreviewGUI my_preview;
+  //private final TetrisStatsGUI my_stats_board;
+  
+  //private int my_score;
+  
+  //private int my_lines;
+  
+  //private int my_level;
+  
+  /** The lines required to advance to the next level. */
+  private int my_lines_to_next_level;
+  
+  //private final TetrisStatsGUI my_stats;
+  
+  public TetrisGameGUI(final Observer the_o,
+                       final Controls the_controls,
+                       final int the_level) {
+    super();
+    //setLayout(new GridBagLayout());
+    my_board = new TetrisBoardGUI(the_controls);
+    my_board.addObserver(the_o);
+    //my_stats = new TetrisStatsGUI();
+    //add(my_stats, BorderLayout.EAST);
+    
+    my_preview = new TetrisPreviewGUI();
+    
+    //my_stats_board = new TetrisStatsGUI();
+
+    my_stats = new int[STATS_STRING.length];
+    my_stats[LEVEL_INDEX] = the_level;
+    my_lines_to_next_level = INITIAL_LINES + (the_level - 1) * LINES_PER_LEVEL_INCREMENT;
+    //setPreferredSize(new Dimension(WIDTH, HEIGHT));
+    init();
+  }
+  
+  /**
+   * The default constructor for <code>TetrisGameGUI</code>.
+   * 
+   * @param the_controls the <code>Controls</code> to be assigned to this game instance.
+   */
+  public TetrisGameGUI(final Observer the_o, final Controls the_controls) {
+    this(the_o, the_controls, DEFAULT_LEVEL);
+  }
+  
+  /**
+   * Initializes the window and all its components.
+   */
+  private void init() {
+    final GridLayout grid = new GridLayout();
+    grid.setHgap(10);
+    setLayout(grid);
+    add(my_board);
+    my_board.addObserver(my_preview);
+    my_board.addObserver(this);
+    my_preview.setAlignmentY(Component.CENTER_ALIGNMENT);
+    add(my_preview);
+    
+  }
+  
+  /**
+   * Starts a game of Tetris.
+   */
+  public void start() {
+    my_board.start();
+  }
+  
+  /**
+   * Ends the current game of Tetris.
+   */
+  public void endGame() {
+    my_board.endGame();
+  }
+  
+  /**
+   * Pauses or unpauses the game.
+   * 
+   * @param the_b true if the game should be paused; false otherwise.
+   */
+  public void setPause(final boolean the_b) {
+    my_board.setPause(the_b);
+  }
+  
+  /**
+   * Sends garbage blocks to this board.  Used for multiplayer.
+   * 
+   * @param the_lines the number of lines of garbage blocks to be sent.
+   */
+  public void sendGarbage(final int the_lines) {
+    my_board.sendGarbage(the_lines);
+  }
+  
+  /**
+   * Sets the scale of all the GUI elements.
+   * 
+   * @param the_scale the scale value.
+   */
+  public void setScale(final double the_scale) {
+    my_board.setScale(the_scale);
+    my_preview.setScale(the_scale);
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * If the Board passes an integer argument, it is assumed to be the number
+   * of lines cleared, and updates the score accordingly.
+   */
+  @Override
+  public void update(final Observable the_obs, final Object the_arg) {
+    if (the_arg instanceof Integer) { //lines cleared!
+      final int lines = (Integer) the_arg;
+      my_stats[LINES_INDEX] += lines;
+      my_stats[SCORE_INDEX] += lines * lines * SCORE_PER_LINE;
+      if (my_stats[LINES_INDEX] >= my_lines_to_next_level) {
+        my_lines_to_next_level += ++my_stats[LEVEL_INDEX] * LINES_PER_LEVEL_INCREMENT;
+        my_board.setTimerDelay(my_stats[LEVEL_INDEX]);
+      }
+    }
+  }
+  
+  /**
+   * Handles key input received from the parent component.
+   * 
+   * @param the_event the event to be passed.
+   */
+  public void handleKeyEvent(final KeyEvent the_event) {
+    my_board.handleKeyEvent(the_event);
+  }
+  
+}

@@ -1,0 +1,129 @@
+package view;
+
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.font.FontRenderContext;
+import java.awt.font.GlyphVector;
+import java.awt.geom.Rectangle2D;
+import java.util.Observable;
+import java.util.Observer;
+
+import javax.swing.JPanel;
+
+import model.Board;
+
+public class TetrisStatsGUI extends JPanel implements Observer {
+
+  /**
+   * The serial version UID.
+   */
+  private static final long serialVersionUID = -9154045033859776802L;
+
+  /** The default width of the stats panel. */
+  private static final int WIDTH = 100;
+  
+  /** The default height of the stats panel. */
+  private static final int HEIGHT = 200;
+  
+  /** The default level when starting a new game. */
+  private static final int DEFAULT_LEVEL = 1;
+  
+  /** Mathematical constant for calculating level progression. */
+  private static final int LINES_PER_LEVEL_INCREMENT = 10;
+  
+  /** The base score value of a single line clear. */
+  private static final int SCORE_PER_LINE = 100;
+  
+  /** The text to be displayed in stats. */
+  private static final String[] STATS_STRING = {
+    "Score: ",
+    "Lines: ",
+    "Level: ",
+  };
+  
+  /** The font to be used for text. */
+  private static final Font FONT = new Font(Font.SERIF, Font.PLAIN, 12);
+
+  /** The index for the score in the current game. */
+  private static final int SCORE_INDEX = 0;
+  
+  /** The index for the number of lines cleared in the current game. */
+  private static final int LINES_INDEX = 1;
+
+  /** The index for the difficulty level of the current game. */
+  private static final int LEVEL_INDEX = 2;
+  
+  /** The statistics for the current game. */
+  private final int[] my_stats;
+  
+  //private int my_score;
+  
+  //private int my_lines;
+  
+  //private int my_level;
+  
+  /** The lines required to advance to the next level. */
+  private int my_lines_to_next_level;
+  
+  /**
+   * Constructs a new <code>TetrisStatsGUI</code> with default values.
+   */
+  public TetrisStatsGUI() {
+    this(DEFAULT_LEVEL);
+  }
+  
+  /**
+   * Constructs a new <code>TetrisStatsGUI</code> with specified values.
+   * 
+   * @param the_level the difficulty level to start at.
+   */
+  public TetrisStatsGUI(final int the_level) {
+    super();
+    my_stats = new int[STATS_STRING.length];
+    my_stats[LEVEL_INDEX] = the_level;
+    my_lines_to_next_level = the_level * LINES_PER_LEVEL_INCREMENT;
+    setPreferredSize(new Dimension(WIDTH, HEIGHT));
+  }
+  
+  @Override
+  protected void paintComponent(final Graphics the_graphics) {
+    final Graphics2D g2d = (Graphics2D) the_graphics;
+    g2d.clearRect(0, 0, WIDTH, HEIGHT);
+    g2d.setFont(FONT);
+
+    int row = 0;
+    for (int i = 0; i < STATS_STRING.length; i++) {
+      final String text = STATS_STRING[i] + my_stats[i];
+      final FontRenderContext frc = g2d.getFontRenderContext();
+      final GlyphVector gv = FONT.createGlyphVector(frc, text);
+      final Rectangle2D rect = gv.getVisualBounds();
+      final int margin = (int) rect.getHeight();
+      row += margin * 2;
+      g2d.drawString(text, margin, row); 
+    }
+    //text = LINES_STRING + my_lines;
+    //gv = FONT.createGlyphVector(frc, text);
+    //rect = gv.getVisualBounds();
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * If the Board passes an integer argument, it is assumed to be the number
+   * of lines cleared, and updates the score accordingly.
+   */
+  @Override
+  public void update(final Observable the_obs, final Object the_arg) {
+    if (the_arg instanceof Integer) { //lines cleared!
+      final int lines = (Integer) the_arg;
+      my_stats[LINES_INDEX] += lines;
+      my_stats[SCORE_INDEX] += lines * lines * SCORE_PER_LINE;
+      if (my_stats[LINES_INDEX] >= my_lines_to_next_level) {
+        my_lines_to_next_level += ++my_stats[LEVEL_INDEX] * LINES_PER_LEVEL_INCREMENT;
+      }
+    }
+  }
+  
+}

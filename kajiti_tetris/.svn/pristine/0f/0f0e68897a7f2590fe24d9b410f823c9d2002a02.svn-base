@@ -1,0 +1,318 @@
+/*
+ * TCSS305 Assignment 6: Tetris
+ * 5/24/2013 Aaron Chen
+ */
+
+package view;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
+
+import javax.swing.JPanel;
+import javax.swing.Timer;
+
+import model.AbstractPiece;
+import model.Block;
+import model.Board;
+import model.Controls;
+import model.MutablePiece;
+import model.Stats;
+
+/**
+ * The graphical user interface for the actual Tetris board.  Also responsible
+ * for handling user input and updating the game's state.
+ * 
+ * @author Kajiti
+ * @version 0.6.1
+ */
+public class TetrisBoardGUI extends JPanel implements Observer {
+
+  /** The serial version UID. */
+  private static final long serialVersionUID = 1978071181777117465L;
+  
+  /** The default width of the board image in pixels. */
+  private static final int WIDTH = 200;
+  
+  /** The default height of the board image in pixels. */
+  private static final int HEIGHT = 400;
+  
+  /** A scale value that determines the thickness of the border for the board image. */
+  private static final double LETTER_BOX = 1.05;
+  
+  /** The default background color for UI windows (not necessarily Containers). */
+  private static final Color BG_COLOR = new Color(0x00, 0x00, 0x00, 0xFF);
+  
+  /** The default delay between steps in milliseconds. */
+  private static final int DELAY = 1000;
+  
+  /** The factor by which the delay goes down as the difficulty level increases. */
+  private static final double DELAY_DECREASE_FACTOR = 0.8;
+  
+  /** The <code>Timer</code> object that controls how fast the game runs. */
+  private final Timer my_timer;
+  
+  /** The board that handles the Tetris gameplay. */
+  private final Board my_board;
+  
+  /** The controls by which the player can play this game. */
+  private final Controls my_controls;
+  
+  /** The graphical representation of the Tetris game. */
+  private final BufferedImage my_base_image;
+  
+  /** The width of the board when starting a new game. */
+  private int my_starting_board_width;
+
+  /** The height of the board when starting a new game. */
+  private int my_starting_board_height;
+  
+  /** The scale value for the graphical representation, in percent. */
+  private double my_panel_scale;
+  
+  /** Determines whether the game is paused or not. */
+  private boolean my_is_paused;
+  
+  /**
+   * Constructs a new <code>TetrisBoardGUI</code>.
+   * 
+   * @param the_preview the preview that will observe the <code>Board</code>.
+   * @param the_stats the statistics that will observe the <code></code>. 
+   * @param the_controls the <code>Controls</code> to be assigned to this game instance.
+   */
+  public TetrisBoardGUI(final TetrisPreviewGUI the_preview,
+                        final Stats the_stats,
+                        final Controls the_controls) {
+    super();
+    my_timer = new Timer(0, new ActionListener() {
+      @Override
+      public void actionPerformed(final ActionEvent the_event) {
+        my_board.step();
+      }
+    });
+    my_starting_board_width = Board.DEFAULT_WIDTH;
+    my_starting_board_height = Board.DEFAULT_HEIGHT;
+    my_board = new Board();
+    my_controls = the_controls;
+    my_base_image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
+    my_is_paused = true;
+    init(the_preview, the_stats);
+  }
+  
+  /**
+   * Initializes the GUI components.
+   * 
+   * @param the_preview the preview that will observe the <code>Board</code>.
+   * @param the_stats the statistics that will observe the <code></code>. 
+   */
+  private void init(final TetrisPreviewGUI the_preview, final Stats the_stats) {
+    my_board.addObserver(this);
+    my_board.addObserver(the_preview);
+    my_board.addObserver(the_stats);
+    the_stats.addObserver(this);
+
+    setScale(1.0);
+    //loadBackgroundImage("images/ambient-purple-wallpaper-normal.jpg");
+    //final int margin = (int) (WIDTH * LETTER_BOX - WIDTH / 2.0);
+    setPreferredSize(new Dimension(my_base_image.getWidth(), my_base_image.getHeight()));
+    //setPreferredSize(new Dimension((int) (WIDTH * LETTER_BOX), (int) (HEIGHT + 2 * margin)));
+    setFocusable(true);
+  }
+  
+  /**
+   * Sets the <code>Timer</code> delay according to the level of difficulty.
+   * 
+   * @param the_level the difficulty level.
+   */
+  public final void setTimerDelay(final int the_level) {
+    my_timer.stop();
+    final int step_delay = (int) (DELAY * Math.pow(DELAY_DECREASE_FACTOR, the_level - 1));
+    my_timer.setInitialDelay(step_delay);
+    my_timer.setDelay(step_delay);
+    my_timer.start();
+  }
+  
+  /**
+   * Resizes the Tetris board graphic.
+   * 
+   * @param the_scale the scale value.
+   */
+  public final void setScale(final double the_scale) {
+    my_panel_scale = the_scale;
+    setSize((int) (WIDTH * my_panel_scale), (int) (HEIGHT * my_panel_scale));
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected void paintComponent(final Graphics the_graphics) {
+    final Graphics2D g2d = (Graphics2D) the_graphics;
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    g2d.setColor(BG_COLOR);
+    g2d.fill(new Rectangle2D.Double(0, 0, WIDTH * my_panel_scale, HEIGHT * my_panel_scale));
+    //g2d.setColor(BG_COLOR);
+    //g2d.fillRect(0, 0, my_base_image.getWidth(), my_base_image.getHeight());
+    if (!my_is_paused) {
+      final List<Block[]> blocks =  my_board.getFrozenBlocks();
+      int y = -1;
+      for (Block[] block : blocks) {
+        y++;
+        for (int i = 0; i < block.length; i++) {
+          block[i].paintBlock(g2d, i, my_board.getHeight() - y - 1, my_panel_scale);
+        }
+      }
+      if (!my_board.gameIsOver()) {
+        final MutablePiece ghost = my_board.getGhostPiece();
+        ((AbstractPiece) ghost).drawPiece(g2d, ghost.getX(),
+                                          my_board.getHeight() - ghost.getY() - 1,
+                                          my_panel_scale);
+        final MutablePiece piece = my_board.getCurrentPiece();
+        ((AbstractPiece) piece).drawPiece(g2d, piece.getX(),
+                                          my_board.getHeight() - piece.getY() - 1,
+                                          my_panel_scale);
+      }
+    }
+  }
+  
+  /**
+   * Starts a game of Tetris.
+   */
+  public void start() {
+    gameOver();
+    my_board.newGame(my_starting_board_width, my_starting_board_height, null);
+    setTimerDelay(1);
+  }
+  
+  /**
+   * Ends the current game of Tetris.
+   */
+  public void endGame() {
+    if (!my_board.gameIsOver()) {
+      my_board.endGame();
+      gameOver();
+    }
+  }
+  
+  /**
+   * Called when the game is over.
+   */
+  private void gameOver() {
+    my_timer.stop();
+    my_is_paused = false; //so the gameover state shows correctly.
+  }
+  
+  /**
+   * Pauses or unpauses the game.
+   * 
+   * @param the_b true if the game should be paused; false otherwise.
+   */
+  public void setPause(final boolean the_b) {
+    my_is_paused = the_b;
+    if (the_b) {
+      my_timer.stop();
+    } else {
+      if (!my_timer.isRunning()) {
+        my_timer.start();
+      }
+    }
+    repaint();
+  }
+  
+  /**
+   * Sends garbage blocks to this board.  Used for multiplayer.
+   * 
+   * @param the_lines the number of lines of garbage blocks to be sent.
+   */
+  public void sendGarbage(final int the_lines) {
+    my_board.addGarbage(the_lines);
+  }
+  
+  /**
+   * Registers an observer to the Tetris <code>Board</code> object.
+   * 
+   * @param the_o the object observing the <code>Board</code>.
+   */
+  public void addObserver(final Observer the_o) {
+    my_board.addObserver(the_o);
+  }
+  
+  /**
+   * Returns the next piece to be fed onto the board.
+   * 
+   * @return the next piece.
+   */
+  public MutablePiece getNextPiece() {
+    return my_board.getNextPiece();
+  }
+  
+  /**
+   * Sets the <code>Board</code>'s dimensions when starting a new game.
+   * 
+   * @param the_width the width of the <code>Board</code>, in blocks.
+   * @param the_height the height of the <code>Board</code>, in blocks.
+   */
+  public void setStartingBoardDimensions(final int the_width, final int the_height) {
+    my_starting_board_width = the_width;
+    my_starting_board_height = the_height;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void update(final Observable the_o, final Object the_arg) {
+    if (the_o.getClass().equals(Board.class)) {
+      if (my_board.gameIsOver()) {
+        gameOver();
+      }
+      repaint();
+    } else if (the_o.getClass().equals(Stats.class) && the_arg instanceof Integer) {
+      setTimerDelay((int) the_arg);
+    }
+  }
+
+  /**
+   * Changes the state of the board depending on the keyboard input.
+   * 
+   * @param the_event the event which was passed. 
+   */
+  public void handleKeyEvent(final KeyEvent the_event) {
+    final int control_code = my_controls.determineControl(the_event);
+    switch(control_code) {
+      case Controls.DOWN:
+        my_timer.restart();
+        my_board.moveDown();
+        break;
+      case Controls.LEFT:
+        my_board.moveLeft();
+        break;
+      case Controls.RIGHT:
+        my_board.moveRight();
+        break;
+      case Controls.DROP:
+        my_timer.restart();
+        my_board.hardDrop();
+        break;
+      case Controls.CCW:
+        my_board.rotate(false);
+        break;
+      case Controls.CW:
+        my_board.rotate(true);
+        break;
+      default:
+        //do nothing
+    }
+  }
+  
+}

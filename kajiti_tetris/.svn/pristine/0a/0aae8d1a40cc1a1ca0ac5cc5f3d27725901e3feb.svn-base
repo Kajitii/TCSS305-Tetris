@@ -1,0 +1,187 @@
+/*
+ * TCSS 305 - Spring 2013 Project Tetris
+ */
+
+package model;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.geom.Line2D;
+import java.awt.geom.Path2D;
+import java.awt.geom.Rectangle2D;
+
+/**
+ * The different types of blocks that will be stored in a Board's grid.
+ * 
+ * @author Alan Fowler
+ * @version Spring 2013
+ */
+public enum Block {
+  /** An empty space in the grid. */
+  EMPTY(" ", Color.BLACK),
+  /** An unusable space in the grid. */
+  PERMANENT("#", Color.DARK_GRAY),
+  /** A Block generated from an opposing player. */
+  JUNK("*", Color.GRAY),
+  /** A Block for a ghost piece. */
+  GHOST("~", new Color(0xFF, 0xFF, 0xFF, 0x33)),
+  /** A Block from an IPiece. */
+  I("I", MutablePiece.I),
+  /** A Block from a JPiece. */
+  J("J", MutablePiece.J),
+  /** A Block from an LPiece. */
+  L("L", MutablePiece.L),
+  /** A Block from an OPiece. */
+  O("O", MutablePiece.O),
+  /** A Block from an SPiece. */
+  S("S", MutablePiece.S),
+  /** A Block from a TPiece. */
+  T("T", MutablePiece.T),
+  /** A Block from a ZPiece. */
+  Z("Z", MutablePiece.Z);
+  
+  /** The length of the side of an individual block in pixels. */
+  private static final int LENGTH = 20;
+  
+  /** A scale value that determines the "miter" width of the blocks. */
+  private static final double SUB_BLOCK = 0.2;
+
+  /**
+   * The character corresponding to a particular value of the enumeration.
+   */
+  private String my_letter;
+
+  /**
+   * The Color corresponding to a particular value of the enumeration.
+   */
+  private Color my_color;
+
+  // Constructor
+
+  /**
+   * Constructs a new Block with the specified letter.
+   * 
+   * @param the_letter The letter.
+   * @param the_color The Color.
+   */
+  private Block(final String the_letter, final Color the_color) {
+    my_letter = the_letter;
+    my_color = the_color;
+  }
+
+  /**
+   * Returns the Color of this Block.
+   * 
+   * @return the Color of this Block.
+   */
+  public Color getColor() {
+    return my_color;
+  }
+
+  /**
+   * Returns a String representation of this Block.
+   * 
+   * @return a String representation of this Block.
+   */
+  @Override
+  public String toString() {
+    return my_letter;
+  }
+  
+  /**
+   * Draws the block at the given coordinates.
+   * 
+   * @param the_g2d the graphics object to be used.
+   * @param the_x the x-coordinates on the board.
+   * @param the_y the y-coordinates on the board.
+   * @param the_scale the scale which to render at.
+   */
+  public void paintBlock(final Graphics2D the_g2d,
+                         final int the_x,
+                         final int the_y,
+                         final double the_scale) {
+    final double mod_x = the_x * LENGTH;
+    final double mod_y = the_y * LENGTH;
+    
+    //Defining the coordinates for the bright side of the block.
+    final double[] bright_shape_x = {
+      mod_x,
+      mod_x + LENGTH,
+      mod_x
+    };
+    final double[] bright_shape_y = {
+      mod_y,
+      mod_y,
+      mod_y + LENGTH,
+    };
+    
+    //Defining the coordinates for the dark side of the block.
+    final double[] dark_shape_x = {
+      mod_x + LENGTH,
+      mod_x,
+      mod_x + LENGTH,
+    };
+    final double[] dark_shape_y = {
+      mod_y + LENGTH,
+      mod_y + LENGTH,
+      mod_y
+    };
+    
+    //Applying the scale factor.
+    for (int i = 0; i < bright_shape_x.length; i++) {
+      bright_shape_x[i] *= the_scale;
+      bright_shape_y[i] *= the_scale;
+      dark_shape_x[i] *= the_scale;
+      dark_shape_y[i] *= the_scale;
+    }
+    
+    //Drawing the block!
+    the_g2d.setStroke(new BasicStroke((float) the_scale,
+                                      BasicStroke.CAP_SQUARE,
+                                      BasicStroke.JOIN_MITER));
+    //Drawing the bright and dark side of the block.
+    final Path2D bright_shape = new Path2D.Double();
+    bright_shape.moveTo(bright_shape_x[0], bright_shape_y[0]);
+    final Path2D dark_shape = new Path2D.Double();
+    dark_shape.moveTo(dark_shape_x[0], dark_shape_y[0]);
+    for (int i = 1; i < bright_shape_x.length; i++) {
+      bright_shape.lineTo(bright_shape_x[i], bright_shape_y[i]);
+      dark_shape.lineTo(dark_shape_x[i], dark_shape_y[i]);
+    }
+    bright_shape.closePath();
+    dark_shape.closePath();
+    the_g2d.setColor(my_color.darker());
+    the_g2d.fill(bright_shape);
+    the_g2d.setColor(my_color.darker().darker().darker());
+    the_g2d.fill(dark_shape);
+    
+    //Drawing the top left corner line.
+    the_g2d.setColor(my_color);
+    the_g2d.draw(new Line2D.Double(mod_x * the_scale,
+                                   mod_y * the_scale,
+                                   (mod_x + LENGTH * SUB_BLOCK) * the_scale,
+                                   (mod_y + LENGTH * SUB_BLOCK) * the_scale));
+    
+    //Drawing the bottom right corner line.
+    the_g2d.setColor(my_color.darker().darker().darker().darker());
+    the_g2d.draw(new Line2D.Double((mod_x + LENGTH - 1) * the_scale,
+                                   (mod_y + LENGTH - 1) * the_scale,
+                                   (mod_x + LENGTH * (1 - SUB_BLOCK)) * the_scale,
+                                   (mod_y + LENGTH * (1 - SUB_BLOCK)) * the_scale));
+    
+    //Drawing the center area of the block.
+    the_g2d.setColor(my_color.darker().darker());
+    the_g2d.fill(new Rectangle2D.Double((mod_x + LENGTH * SUB_BLOCK) * the_scale,
+                                        (mod_y + LENGTH * SUB_BLOCK) * the_scale, 
+                                        (LENGTH * (1 - 2 * SUB_BLOCK)) * the_scale,
+                                        (LENGTH * (1 - 2 * SUB_BLOCK)) * the_scale));
+    
+    //Drawing the top right and bottom left corner lines.
+    the_g2d.draw(new Line2D.Double(mod_x * the_scale,
+                                   (mod_y + LENGTH - 1) * the_scale,
+                                   (mod_x + LENGTH - 1) * the_scale,
+                                   mod_y * the_scale));
+  }
+  
+}

@@ -1,0 +1,111 @@
+/*
+ * TCSS305 Assignment 6: Tetris
+ * 5/25/2013 Aaron Chen
+ */
+
+package view;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.Observable;
+import java.util.Observer;
+
+import javax.swing.JPanel;
+
+import model.AbstractPiece;
+import model.Board;
+import model.IPiece;
+import model.MutablePiece;
+
+/**
+ * The drawing panel for the Tetris piece preview.
+ * 
+ * @author Kajiti
+ * @version 0.6.1
+ */
+public class TetrisPreviewGUI extends JPanel implements Observer {
+
+  /** The serial version UID. */
+  private static final long serialVersionUID = -7959909502432196700L;
+
+  /** The default width of the preview panel. */
+  private static final int WIDTH = 120;
+  
+  /** The default height of the preview panel. */
+  private static final int HEIGHT = 120;
+  
+  /** The offset value for drawing a piece correctly in the preview panel. */
+  private static final int OFFSET = 4;
+  
+  /** The default piece to be drawn if no valid piece can be found. */
+  private static final MutablePiece DEFAULT_PIECE = new IPiece(0, 0);
+  
+  /** The default background color for UI windows (not necessarily Containers). */
+  private static final Color BG_COLOR = new Color(0x00, 0x00, 0x00, 0xFF);
+  
+  /** The graphical representation of the Tetris game. */
+  private final BufferedImage my_base_image;
+  
+  /** The scale value for the graphical representation, in percent. */
+  private double my_panel_scale;
+  
+  private double my_scaled_width;
+  private double my_scaled_height;
+  
+  /** The piece that will be put into play next. */
+  private MutablePiece my_piece;
+  
+  
+  /**
+   * Constructs a new <code>TetrisPreviewGUI</code> object.
+   */
+  public TetrisPreviewGUI() {
+    super();
+    my_panel_scale = 1.0;
+    my_base_image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
+    setPreferredSize(new Dimension(WIDTH, HEIGHT));
+  }
+  
+  /**
+   * Resizes the Tetris board graphic.
+   * 
+   * @param the_scale the scale value.
+   */
+  public final void setScale(final double the_scale) {
+    my_panel_scale = the_scale;
+    my_scaled_width = WIDTH * my_panel_scale;
+    my_scaled_height = HEIGHT * my_panel_scale;
+    setSize((int) my_scaled_width, (int) my_scaled_height);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected void paintComponent(final Graphics the_graphics) {
+    final Graphics2D g2d = (Graphics2D) the_graphics;
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    g2d.setColor(BG_COLOR);
+    g2d.fill(new Rectangle2D.Double(0, 0, WIDTH * my_scaled_width, HEIGHT * my_scaled_height));
+    if (my_piece != null) {
+      ((AbstractPiece) my_piece).drawPiece(g2d, 1, OFFSET, my_panel_scale);
+    }
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void update(final Observable the_o, final Object the_arg) {
+    if (the_o.getClass().equals(Board.class)) {
+      my_piece = ((Board) the_o).getNextPiece();
+      repaint();
+    } 
+  }
+
+}
